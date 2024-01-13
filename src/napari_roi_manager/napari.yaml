@@ -3,25 +3,12 @@ display_name: ROI Manager
 # use 'hidden' to remove plugin from napari hub search results
 visibility: public
 # see https://napari.org/stable/plugins/manifest.html for valid categories
-categories: ["Annotation", "Segmentation", "Acquisition"]
+categories: ["Annotation"]
 contributions:
   commands:
-    - id: napari-roi-manager.make_container_widget
-      python_name: napari_roi_manager:ImageThreshold
+    - id: napari-roi-manager.make_qwidget
+      python_name: napari_roi_manager:QRoiManager
       title: Make threshold Container widget
-    - id: napari-roi-manager.make_magic_widget
-      python_name: napari_roi_manager:threshold_magic_widget
-      title: Make threshold magic widget
-    - id: napari-roi-manager.make_function_widget
-      python_name: napari_roi_manager:threshold_autogenerate_widget
-      title: Make threshold function widget
   widgets:
-    - command: napari-roi-manager.make_container_widget
-      display_name: Container Threshold
-    - command: napari-roi-manager.make_magic_widget
-      display_name: Magic Threshold
-    - command: napari-roi-manager.make_function_widget
-      autogenerate: true
-      display_name: Autogenerate Threshold
     - command: napari-roi-manager.make_qwidget
-      display_name: Example QWidget
+      display_name: Open ROI Manager

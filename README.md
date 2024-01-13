@@ -9,6 +9,8 @@
 
 A ROI Manager Widget with an UI similar to ImageJ
 
+![](images/demo.gif)
+
 This Plugin requires `napari>=0.4.19`.
 
 ----------------------------------

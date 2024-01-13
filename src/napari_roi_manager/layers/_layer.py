@@ -39,6 +39,10 @@ class RoiManagerLayer(Shapes):
     def _on_data_change(self, ev):
         if ev.action is ActionType.ADDING:
             self._remove_current()
+            if not self.show_all:
+                with self.events.data.blocker():
+                    self.selected_data = set(range(self.nshapes))
+                    super().remove_selected()
             self.feature_defaults = {"id": self.nshapes}
         elif ev.action is ActionType.ADDED:
             idx = ev.data_indices[0]
@@ -74,6 +78,11 @@ class RoiManagerLayer(Shapes):
                 index=self._current_item,
                 shape_type=self.shape_type[self._current_item],
             )
+            if not self.show_all:
+                self._hidden_roi_data.append(self.data[self._current_item])
+                self._hidden_roi_type.append(
+                    self.shape_type[self._current_item]
+                )
         self._current_item = None
         self.selected_data = set()
         self.refresh()
@@ -113,8 +122,13 @@ class RoiManagerLayer(Shapes):
             self._hidden_roi_type = self.shape_type
             if self._current_item is not None:
                 cur = self._hidden_roi_data.pop(self._current_item)
-                self.data = [cur]
+                self.data = []
+                self.add(
+                    cur,
+                    shape_type=self._hidden_roi_type.pop(self._current_item),
+                )
                 self._current_item = 0
+                self.selected_data = {0}
             else:
                 self.data = []
             self.text.visible = False

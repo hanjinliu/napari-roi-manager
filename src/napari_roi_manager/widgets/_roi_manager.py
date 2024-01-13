@@ -35,6 +35,9 @@ class QRoiListWidget(QtW.QTableWidget):
         self.setHorizontalHeaderLabels(["name", "shape type"])
         self.horizontalHeader().setFixedHeight(18)
         self.setMaximumWidth(120)
+        self.verticalHeader().setSectionResizeMode(
+            QtW.QHeaderView.ResizeMode.Fixed
+        )
         self.itemSelectionChanged.connect(self._selection_changed)
 
     def addRow(self, text: str, shape_type: str):
@@ -46,7 +49,6 @@ class QRoiListWidget(QtW.QTableWidget):
         item.setFlags(item.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
         self.setItem(row, 1, item)
         self.setRowHeight(row, 18)
-        self.setVerticalHeaderItem(row, QtW.QTableWidgetItem(str(row)))
 
     def _selection_changed(self):
         indices = {idx.row() for idx in self.selectedIndexes()}
@@ -65,6 +67,9 @@ class QRoiManager(QtW.QWidget):
         viewer.add_layer(layer)
 
         self._btns = QRoiManagerButtons(self)
+        self._btns.setSizePolicy(
+            QtW.QSizePolicy.Policy.Minimum, QtW.QSizePolicy.Policy.Expanding
+        )
         self._roilist = QRoiListWidget(self)
         self._roilist.setSizePolicy(
             QtW.QSizePolicy.Policy.Maximum, QtW.QSizePolicy.Policy.Expanding
@@ -102,5 +107,6 @@ class QRoiManager(QtW.QWidget):
 
         @roilist.selected.connect
         def _roi_selected(indices):
+            layer._remove_current()
             if layer.show_all:
                 layer.selected_data = set(indices)

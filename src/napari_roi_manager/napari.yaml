@@ -8,7 +8,7 @@ contributions:
   commands:
     - id: napari-roi-manager.make_qwidget
       python_name: napari_roi_manager:QRoiManager
-      title: Make threshold Container widget
+      title: Open ROI manager widget
   widgets:
     - command: napari-roi-manager.make_qwidget
-      display_name: Open ROI Manager
+      display_name: ROI Manager

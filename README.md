@@ -9,7 +9,7 @@
 
 A ROI Manager Widget with an UI similar to ImageJ
 
-![](images/demo.gif)
+![](https://github.com/hanjinliu/napari-roi-manager/blob/main/images/demo.gif)
 
 This Plugin requires `napari>=0.4.19`.
 

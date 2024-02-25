@@ -60,8 +60,8 @@ include = [
 ]
 
 [tool.black]
-line-length = 79
-target-version = ["py39", "py310", "py311"]
+line-length = 88
+target-version = ["py39"]
 
 
 [tool.ruff]

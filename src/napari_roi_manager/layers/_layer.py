@@ -81,11 +81,12 @@ class RoiManagerLayer(Shapes):
             )
             if not self.show_all:
                 self._hidden_roi_data.append(self.data[self._current_item])
-                self._hidden_roi_type.append(
-                    self.shape_type[self._current_item]
-                )
+                self._hidden_roi_type.append(self.shape_type[self._current_item])
+            else:
+                self.selected_data = set()
+        else:
+            self.selected_data = set()
         self._current_item = None
-        self.selected_data = set()
         self.refresh()
 
     def remove_selected(self):
@@ -112,17 +113,17 @@ class RoiManagerLayer(Shapes):
             raise TypeError("show_all must be a bool")
         if self._show_all == show_all:
             return
+        _current_item = self._current_item
         if show_all:
-            _current_item = self._current_item
             stype = self.shape_type
             self.data = self._hidden_roi_data + self.data
             self.shape_type = self._hidden_roi_type + stype
-            self._current_item = (
-                _current_item  # _current_item may change in setters
-            )
+            self._current_item = _current_item  # _current_item may change in setters
             if self._current_item is not None:
                 self._current_item = self.nshapes - 1
                 self.selected_data = {self._current_item}
+            self._hidden_roi_data.clear()
+            self._hidden_roi_type.clear()
         else:
             old_data = self.data
             self._hidden_roi_data = old_data
@@ -137,6 +138,7 @@ class RoiManagerLayer(Shapes):
                 self.selected_data = {0}
             else:
                 self.data = []
+                self._current_item = None
             self.text.visible = False
         self._show_all = show_all
 

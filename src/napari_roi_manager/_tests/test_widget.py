@@ -40,3 +40,20 @@ def test_to_shapes(make_napari_viewer: Callable[[], napari.Viewer]):
     roi_manager.add(_rectangle(6, 6), shape_type="rectangle")
     roi_manager.register()
     roi_manager.as_shapes_layer()
+
+
+def test_add_during_not_show_all(
+    make_napari_viewer: Callable[[], napari.Viewer]
+):
+    viewer = make_napari_viewer()
+    roi_manager = QRoiManager(viewer)
+    roi_manager.add(_rectangle(0, 0), shape_type="rectangle")
+    roi_manager.register()
+    roi_manager.set_show_all(False)
+    roi_manager.add(_rectangle(6, 6), shape_type="rectangle")
+    roi_manager.register()
+    roi_manager.add(_rectangle(9, 6), shape_type="rectangle")
+    roi_manager.register()
+    roi_manager.select(0)
+    roi_manager.set_show_all(True)
+    roi_manager.set_show_all(False)

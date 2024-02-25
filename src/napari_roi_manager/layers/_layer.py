@@ -73,6 +73,7 @@ class RoiManagerLayer(Shapes):
                 super().remove_selected()
 
     def register_roi(self):
+        """Register the current ROI to the manager."""
         if self._current_item is not None:
             self.events.roi_added(
                 index=self._current_item,
@@ -88,6 +89,7 @@ class RoiManagerLayer(Shapes):
         self.refresh()
 
     def remove_selected(self):
+        """Remove the selected ROIs from the manager."""
         selected = self.selected_data.copy()
         super().remove_selected()
         if selected != {self._current_item}:
@@ -101,6 +103,7 @@ class RoiManagerLayer(Shapes):
 
     @property
     def show_all(self) -> bool:
+        """If true, show all registered ROIs. If false, show only the current ROI."""
         return self._show_all
 
     @show_all.setter
@@ -110,9 +113,13 @@ class RoiManagerLayer(Shapes):
         if self._show_all == show_all:
             return
         if show_all:
+            _current_item = self._current_item
             stype = self.shape_type
             self.data = self._hidden_roi_data + self.data
             self.shape_type = self._hidden_roi_type + stype
+            self._current_item = (
+                _current_item  # _current_item may change in setters
+            )
             if self._current_item is not None:
                 self._current_item = self.nshapes - 1
                 self.selected_data = {self._current_item}
@@ -122,11 +129,10 @@ class RoiManagerLayer(Shapes):
             self._hidden_roi_type = self.shape_type
             if self._current_item is not None:
                 cur = self._hidden_roi_data.pop(self._current_item)
+                typ = self._hidden_roi_type.pop(self._current_item)
+                self._current_item = None
                 self.data = []
-                self.add(
-                    cur,
-                    shape_type=self._hidden_roi_type.pop(self._current_item),
-                )
+                self.add(cur, shape_type=typ)
                 self._current_item = 0
                 self.selected_data = {0}
             else:
@@ -135,10 +141,10 @@ class RoiManagerLayer(Shapes):
         self._show_all = show_all
 
     def as_shapes_layer(self) -> Shapes:
+        """Convert this layer into napari Shapes layer."""
+        self._remove_current()
         if self.show_all:
             shape_data = self.data
-            if self._current_item is not None:
-                shape_data.pop(self._current_item)
             shape_types = self.shape_type
         else:
             shape_data = self._hidden_roi_data

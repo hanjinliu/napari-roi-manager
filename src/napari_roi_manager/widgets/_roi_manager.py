@@ -23,7 +23,7 @@ class QRoiManagerButtons(QtW.QWidget):
         layout.addWidget(self._to_shapes_btn)
         layout.addWidget(self._show_all_checkbox)
 
-        self.setFixedWidth(100)
+        self.setFixedWidth(95)
 
 
 class QRoiListWidget(QtW.QTableWidget):
@@ -32,9 +32,11 @@ class QRoiListWidget(QtW.QTableWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setColumnCount(2)
-        self.setHorizontalHeaderLabels(["name", "shape type"])
+        self.setHorizontalHeaderLabels(["name", "type"])
+        self.setColumnWidth(0, 80)
+        self.setColumnWidth(1, 65)
         self.horizontalHeader().setFixedHeight(18)
-        self.setMaximumWidth(120)
+        self.setMaximumWidth(180)
         self.verticalHeader().setSectionResizeMode(
             QtW.QHeaderView.ResizeMode.Fixed
         )
@@ -68,15 +70,26 @@ class QRoiManager(QtW.QWidget):
 
         self._btns = QRoiManagerButtons(self)
         self._btns.setSizePolicy(
-            QtW.QSizePolicy.Policy.Minimum, QtW.QSizePolicy.Policy.Expanding
+            QtW.QSizePolicy.Policy.Fixed, QtW.QSizePolicy.Policy.Expanding
         )
         self._roilist = QRoiListWidget(self)
         self._roilist.setSizePolicy(
-            QtW.QSizePolicy.Policy.Maximum, QtW.QSizePolicy.Policy.Expanding
+            QtW.QSizePolicy.Policy.Expanding, QtW.QSizePolicy.Policy.Expanding
         )
-        layout.addWidget(self._roilist)
-        layout.addWidget(self._btns)
+        layout.addWidget(
+            self._roilist,
+            2,
+            QtCore.Qt.AlignmentFlag.AlignTop
+            | QtCore.Qt.AlignmentFlag.AlignLeft,
+        )
+        layout.addWidget(
+            self._btns,
+            1,
+            QtCore.Qt.AlignmentFlag.AlignTop
+            | QtCore.Qt.AlignmentFlag.AlignRight,
+        )
         self.connect_layer(layer)
+        self._layer = layer
 
     def connect_layer(self, layer: RoiManagerLayer):
         btns = self._btns
@@ -84,10 +97,7 @@ class QRoiManager(QtW.QWidget):
         btns._add_roi_btn.clicked.connect(layer.register_roi)
         btns._remove_roi_btn.clicked.connect(layer.remove_selected)
 
-        @btns._to_shapes_btn.clicked.connect
-        def _to_shapes():
-            shapes = layer.as_shapes_layer()
-            self._viewer.add_layer(shapes)
+        btns._to_shapes_btn.clicked.connect(self.as_shapes_layer)
 
         @btns._show_all_checkbox.stateChanged.connect
         def _show_all_changed(val):
@@ -110,3 +120,26 @@ class QRoiManager(QtW.QWidget):
             layer._remove_current()
             if layer.show_all:
                 layer.selected_data = set(indices)
+
+    def add(self, data, shape_type: str = "rectangle"):
+        return self._layer.add(data, shape_type=shape_type)
+
+    def register(self):
+        self._layer.register_roi()
+
+    def select(self, indices=()):
+        if not hasattr(indices, "__iter__"):
+            indices = {indices}
+        self._layer.selected_data = set(indices)
+
+    def remove(self, indices=None):
+        if indices is not None:
+            self._layer.selected_data = set(indices)
+        self._layer.remove_selected()
+
+    def set_show_all(self, show_all: bool):
+        self._btns._show_all_checkbox.setChecked(show_all)
+
+    def as_shapes_layer(self):
+        shapes = self._layer.as_shapes_layer()
+        self._viewer.add_layer(shapes)

@@ -132,11 +132,23 @@ class RoiManagerLayer(Shapes):
         rois = RoiData.from_json_dict(js)
         nshapes = self.roi_count()
         self._current_item = None
+        if rois.names is not None and (roimgr := self._roi_manager_ref()) is not None:
+            cur_column = roimgr._roilist.get_column("name")
+        else:
+            cur_column = []
         with self.events.data.blocker():
             for index, (data, shape_type) in enumerate(zip(rois.data, rois.shape_type)):
                 self.add([data], shape_type=shape_type)
                 self.events.roi_added(index=nshapes + index, shape_type=shape_type)
         self.selected_data = set()
+        df = self.features
+        df["id"] = np.arange(df.shape[0], dtype=np.uint32)
+        if rois.names is not None and (roimgr := self._roi_manager_ref()) is not None:
+            roilist = roimgr._roilist
+            new_column = cur_column + rois.names
+            roilist.set_column("name", new_column)
+            df["name"] = new_column
+        self.features = df
         self.refresh()
         return None
 
@@ -261,7 +273,11 @@ class RoiManagerLayer(Shapes):
         else:
             shape_data = self._hidden_shapes.data
             shape_type = self._hidden_shapes.shape_type
+        if (roimgr := self._roi_manager_ref()) is not None:
+            names = roimgr._roilist.get_column("name")
+        else:
+            names = None
         if self._current_item is not None:
             shape_data.pop(self._current_item)
             shape_type.pop(self._current_item)
-        return RoiData(shape_data, shape_type)
+        return RoiData(shape_data, shape_type, names)

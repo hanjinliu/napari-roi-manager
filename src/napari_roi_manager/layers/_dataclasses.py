@@ -50,13 +50,18 @@ class HiddenShapes:
 class RoiData:
     data: list[NDArray[np.number]] = field(default_factory=list)
     shape_type: list[str] = field(default_factory=list)
+    names: list[str] | None = field(default_factory=lambda: None)
 
     def to_json_dict(self) -> dict[str, Any]:
         data = [d.tolist() for d in self.data]
-        return {"data": data, "shape_type": self.shape_type}
+        out = {"data": data, "shape_type": self.shape_type}
+        if self.names is not None:
+            out["names"] = self.names
+        return out
 
     @classmethod
     def from_json_dict(cls, js: dict[str, Any]) -> "RoiData":
         data = [np.array(d) for d in js["data"]]
         shape_type = js["shape_type"]
-        return RoiData(data, shape_type=shape_type)
+        names = js.get("names")
+        return RoiData(data, shape_type=shape_type, names=names)

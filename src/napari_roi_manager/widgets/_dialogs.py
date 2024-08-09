@@ -37,7 +37,7 @@ class QCustomDialog(QtW.QDialog):
     ) -> QCustomDialog:
         self = cls(parent)
         self.setWindowTitle(title)
-        self._message.setText(wrap(message))
+        self._message.setText("\n".join(wrap(message)))
         for choice in choices:
             btn = QtW.QPushButton(choice, self._buttons)
             self._buttons.layout().addWidget(btn)

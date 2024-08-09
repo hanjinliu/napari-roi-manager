@@ -59,13 +59,13 @@ class QRoiListWidget(QtW.QTableWidget):
         self.horizontalHeader().setFixedHeight(18)
         self.setMaximumWidth(180)
         self.verticalHeader().setSectionResizeMode(QtW.QHeaderView.ResizeMode.Fixed)
-        self._is_adding_row = False
+        self._blocking_cell_changed = False
         self.itemSelectionChanged.connect(self._selection_changed)
         self.cellChanged.connect(self._cell_changed)
 
     def addRow(self, text: str, shape_type: str):
         row = self.rowCount()
-        self._is_adding_row = True
+        self._blocking_cell_changed = True
         try:
             self.insertRow(row)
             self.setItem(row, 0, QtW.QTableWidgetItem(text))
@@ -74,10 +74,24 @@ class QRoiListWidget(QtW.QTableWidget):
             item.setFlags(item.flags() & ~QtCore.Qt.ItemFlag.ItemIsEditable)
             self.setItem(row, 1, item)
         finally:
-            self._is_adding_row = False
+            self._blocking_cell_changed = False
         self.setRowHeight(row, 18)
 
     def get_column(self, col: str) -> list[str]:
+        col_idx = self._get_column_index(col)
+        return [self.item(row, col_idx).text() for row in range(self.rowCount())]
+
+    def set_column(self, col: str, values: list[str]):
+        col_idx = self._get_column_index(col)
+        print("set", col, values)
+        self._blocking_cell_changed = True
+        try:
+            for row, value in enumerate(values):
+                self.setItem(row, col_idx, QtW.QTableWidgetItem(value))
+        finally:
+            self._blocking_cell_changed = False
+
+    def _get_column_index(self, col: str) -> int:
         col_idx = -1
         for i in range(self.columnCount()):
             if self.horizontalHeaderItem(i).text() == col:
@@ -85,14 +99,14 @@ class QRoiListWidget(QtW.QTableWidget):
                 break
         else:
             raise ValueError(f"Column {col!r} not found.")
-        return [self.item(row, col_idx).text() for row in range(self.rowCount())]
+        return col_idx
 
     def _selection_changed(self):
         indices = {idx.row() for idx in self.selectedIndexes()}
         self.selected.emit(indices)
 
     def _cell_changed(self, row: int, col: int):
-        if self._is_adding_row or col != 0:
+        if self._blocking_cell_changed or col != 0:
             return
         self.renamed.emit(row, self.item(row, col).text())
 

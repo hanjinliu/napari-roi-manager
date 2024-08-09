@@ -1,3 +1,4 @@
+from typing import Iterable
 import napari
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
@@ -69,25 +70,13 @@ class QRoiManager(QtW.QWidget):
         viewer.add_layer(layer)
 
         self._btns = QRoiManagerButtons(self)
-        self._btns.setSizePolicy(
-            QtW.QSizePolicy.Policy.Fixed, QtW.QSizePolicy.Policy.Expanding
-        )
+        _SP = QtW.QSizePolicy.Policy
+        _AF = QtCore.Qt.AlignmentFlag
+        self._btns.setSizePolicy(_SP.Fixed, _SP.Expanding)
         self._roilist = QRoiListWidget(self)
-        self._roilist.setSizePolicy(
-            QtW.QSizePolicy.Policy.Expanding, QtW.QSizePolicy.Policy.Expanding
-        )
-        layout.addWidget(
-            self._roilist,
-            2,
-            QtCore.Qt.AlignmentFlag.AlignTop
-            | QtCore.Qt.AlignmentFlag.AlignLeft,
-        )
-        layout.addWidget(
-            self._btns,
-            1,
-            QtCore.Qt.AlignmentFlag.AlignTop
-            | QtCore.Qt.AlignmentFlag.AlignRight,
-        )
+        self._roilist.setSizePolicy(_SP.Expanding, _SP.Expanding)
+        layout.addWidget(self._roilist, 2, _AF.AlignTop | _AF.AlignLeft)
+        layout.addWidget(self._btns, 1, _AF.AlignTop | _AF.AlignRight)
         self.connect_layer(layer)
         self._layer = layer
 
@@ -125,10 +114,11 @@ class QRoiManager(QtW.QWidget):
         return self._layer.add(data, shape_type=shape_type)
 
     def register(self):
+        """Register the current ROI to the manager."""
         self._layer.register_roi()
 
     def select(self, indices=()):
-        if not hasattr(indices, "__iter__"):
+        if not isinstance(indices, Iterable):
             indices = {indices}
         self._layer.selected_data = set(indices)
 

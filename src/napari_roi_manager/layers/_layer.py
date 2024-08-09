@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
+from napari_roi_manager.layers._hidden_data import HiddenShapes
 from napari.layers import Shapes
 from napari.layers.base import ActionType
 from napari.utils.events import Event
@@ -13,9 +14,9 @@ class RoiManagerLayer(Shapes):
 
     def __init__(self, *args, **kwargs):
         self._current_item: int | None = None
+        # the last current_item before unchecking "show all"
         self._show_all = True
-        self._hidden_roi_data: list[np.ndarray] = []
-        self._hidden_roi_type: list[str] = []
+        self._hidden_shapes = HiddenShapes()
 
         kwargs["face_color"] = [0.0, 0.0, 0.0, 0.0]
         kwargs["edge_color"] = [1.0, 1.0, 0.0, 1.0]
@@ -80,8 +81,8 @@ class RoiManagerLayer(Shapes):
                 shape_type=self.shape_type[self._current_item],
             )
             if not self.show_all:
-                self._hidden_roi_data.append(self.data[self._current_item])
-                self._hidden_roi_type.append(self.shape_type[self._current_item])
+                self._hidden_shapes.data.append(self.data[self._current_item])
+                self._hidden_shapes.shape_type.append(self.shape_type[self._current_item])
             else:
                 self.selected_data = set()
         else:
@@ -114,29 +115,36 @@ class RoiManagerLayer(Shapes):
         if self._show_all == show_all:
             return
         _current_item = self._current_item
-        if show_all:
-            stype = self.shape_type
-            self.data = self._hidden_roi_data + self.data
-            self.shape_type = self._hidden_roi_type + stype
+        if show_all:  # "show all" checked
+            old_shape_type = self.shape_type
+            self.data = self._hidden_shapes.data + self.data
+            if self._hidden_shapes.shape_type + old_shape_type:
+                # NOTE: bug in napari? cannot set empty list to shape_type
+                self.shape_type = self._hidden_shapes.shape_type + old_shape_type
             self._current_item = _current_item  # _current_item may change in setters
-            if self._current_item is not None:
-                self._current_item = self.nshapes - 1
+            if self._hidden_shapes.current_item is not None:
+                self._current_item = self._hidden_shapes.current_item
                 self.selected_data = {self._current_item}
-            self._hidden_roi_data.clear()
-            self._hidden_roi_type.clear()
-        else:
-            old_data = self.data
-            self._hidden_roi_data = old_data
-            self._hidden_roi_type = self.shape_type
+            else:
+                self.selected_data = self._hidden_shapes.selected_data
+            self._hidden_shapes.clear()
+        else:  # "show all" unchecked
+            self._hidden_shapes.update(
+                data=self.data,
+                shape_type=self.shape_type,
+                selected_data=self.selected_data,
+                current_item=self._current_item,
+            )
             if self._current_item is not None:
-                cur = self._hidden_roi_data.pop(self._current_item)
-                typ = self._hidden_roi_type.pop(self._current_item)
+                cur, typ = self._hidden_shapes.pop(self._current_item)
                 self._current_item = None
                 self.data = []
+                # add last current ROI to show only it.
                 self.add(cur, shape_type=typ)
                 self._current_item = 0
                 self.selected_data = {0}
             else:
+                self.selected_data = set()
                 self.data = []
                 self._current_item = None
             self.text.visible = False
@@ -147,8 +155,8 @@ class RoiManagerLayer(Shapes):
         self._remove_current()
         if self.show_all:
             shape_data = self.data
-            shape_types = self.shape_type
+            shape_type = self.shape_type
         else:
-            shape_data = self._hidden_roi_data
-            shape_types = self._hidden_roi_type
-        return Shapes(shape_data, shape_type=shape_types, name="Shapes")
+            shape_data = self._hidden_shapes.data
+            shape_type = self._hidden_shapes.shape_type
+        return Shapes(shape_data, shape_type=shape_type, name="Shapes")

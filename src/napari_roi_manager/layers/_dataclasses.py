@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -53,6 +55,7 @@ class RoiData:
     names: list[str] | None = field(default_factory=lambda: None)
 
     def to_json_dict(self) -> dict[str, Any]:
+        """Convert RoiData to a JSON serializable dictionary."""
         data = [d.tolist() for d in self.data]
         out = {"data": data, "shape_type": self.shape_type}
         if self.names is not None:
@@ -60,7 +63,8 @@ class RoiData:
         return out
 
     @classmethod
-    def from_json_dict(cls, js: dict[str, Any]) -> "RoiData":
+    def from_json_dict(cls, js: dict[str, Any]) -> RoiData:
+        """Create RoiData from a JSON serializable dictionary."""
         data = [np.array(d) for d in js["data"]]
         shape_type = js["shape_type"]
         names = js.get("names")

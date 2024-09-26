@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import weakref
+from contextlib import nullcontext
 from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -169,16 +170,23 @@ class RoiManagerLayer(Shapes):
             return self._hidden_shapes.len()
 
     def _initialize_layer(self):
-        self.data = []
+        self.selected_data = set(range(self.nshapes))
+        self.remove_selected()
         self._hidden_shapes.clear()
         self._current_item = None
 
     def remove_selected(self):
         """Remove the selected ROIs from the manager."""
         selected = self.selected_data.copy()
-        super().remove_selected()
-        if selected != {self._current_item}:
-            self.events.roi_removed(indices=selected)
+        # NOTE: there are bugs in removing all the rest of shapes
+        if self.nshapes == len(self.selected_data):
+            ctx = self.events.highlight.blocker()
+        else:
+            ctx = nullcontext()
+        with ctx:
+            super().remove_selected()
+            if selected != {self._current_item}:
+                self.events.roi_removed(indices=selected)
 
     @Shapes.mode.setter
     def mode(self, mode):
@@ -222,6 +230,7 @@ class RoiManagerLayer(Shapes):
             return
         _current_item = self._current_item
         if show_all:  # "show all" checked
+            self.selected_data = set()
             old_shape_type = self.shape_type
             self.data = self._hidden_shapes.data + self.data
             self.features = pd.concat([self._hidden_shapes.features, self.features])

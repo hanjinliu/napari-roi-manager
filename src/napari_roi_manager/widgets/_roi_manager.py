@@ -24,12 +24,14 @@ class QRoiManagerButtons(QtW.QWidget):
         # text related
         self._text_group = QtW.QGroupBox("ROI Text")
         _text_group_layout = QtW.QVBoxLayout(self._text_group)
-        _text_group_layout.setContentsMargins(2, 6, 2, 4)
+        _text_group_layout.setContentsMargins(2, 8, 2, 4)
         self._text_feature_name = QtW.QComboBox()
         self._text_feature_name.addItems(["ID", "Name"])
         self._text_font_size = QtW.QSpinBox()
         self._text_font_size.setRange(4, 64)
         self._text_font_size.setValue(9)
+        self._text_font_size.setToolTip("Font size for the ROI text.")
+        self._text_font_size.setSuffix(" pt")
         _text_group_layout.addWidget(self._text_feature_name)
         _text_group_layout.addWidget(self._text_font_size)
 
@@ -83,7 +85,6 @@ class QRoiListWidget(QtW.QTableWidget):
 
     def set_column(self, col: str, values: list[str]):
         col_idx = self._get_column_index(col)
-        print("set", col, values)
         self._blocking_cell_changed = True
         try:
             for row, value in enumerate(values):
@@ -137,7 +138,7 @@ class QRoiManager(QtW.QWidget):
         btns = self._btns
         roilist = self._roilist
         btns._add_roi_btn.clicked.connect(layer.register_roi)
-        btns._remove_roi_btn.clicked.connect(layer.remove_selected)
+        btns._remove_roi_btn.clicked.connect(self._remove_button_clicked)
         btns._load_roiset_btn.clicked.connect(self.load_roiset)
         btns._save_roiset_btn.clicked.connect(self.save_roiset)
         btns._text_feature_name.currentIndexChanged.connect(self.set_text_feature_name)
@@ -175,8 +176,10 @@ class QRoiManager(QtW.QWidget):
     def add(self, data, shape_type: str = "rectangle"):
         return self._layer.add(data, shape_type=shape_type)
 
-    def register(self):
+    def register(self, data=None, shape_type: str = "rectangle"):
         """Register the current ROI to the manager."""
+        if data is not None:
+            self.add(data, shape_type=shape_type)
         self._layer.register_roi()
 
     def select(self, indices=()):
@@ -188,6 +191,18 @@ class QRoiManager(QtW.QWidget):
         if indices is not None:
             self._layer.selected_data = set(indices)
         self._layer.remove_selected()
+
+    def _remove_button_clicked(self):
+        if self._layer.show_all:
+            self._layer.remove_selected()
+        else:
+            to_remove = sorted(
+                {index.row() for index in self._roilist.selectedIndexes()},
+                reverse=True,
+            )
+            for i in to_remove:
+                self._layer._hidden_shapes.pop(i)
+                self._roilist.removeRow(i)
 
     def set_text_feature_name(self, idx: int):
         self._layer.text_feature_name = ["id", "name"][idx]
@@ -211,6 +226,8 @@ class QRoiManager(QtW.QWidget):
             )
             if file:
                 path = file[0]
+                if not path:
+                    return
             else:
                 return
             if self._layer.roi_count() > 0:
@@ -238,6 +255,8 @@ class QRoiManager(QtW.QWidget):
             )
             if file:
                 path = file[0]
+                if not path:
+                    return
             else:
                 return
         self._layer.write_json(path)

@@ -109,9 +109,3 @@ exclude = [
 
 target-version = "py39"
 fix = true
-
-[tool.pyright.defineConstant]
-PYQT5 = true
-PYSIDE2 = false
-PYQT6 = false
-PYSIDE6 = false

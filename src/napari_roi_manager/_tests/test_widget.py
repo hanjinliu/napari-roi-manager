@@ -47,13 +47,46 @@ def test_to_shapes(make_napari_viewer: Callable[[], napari.Viewer]):
 def test_add_during_not_show_all(make_napari_viewer: Callable[[], napari.Viewer]):
     viewer = make_napari_viewer()
     roi_manager = QRoiManager(viewer)
-    roi_manager.add(_rectangle(0, 0), shape_type="rectangle")
-    roi_manager.register()
+    roi_manager.register(_rectangle(0, 0), shape_type="rectangle")
     roi_manager.set_show_all(False)
-    roi_manager.add(_rectangle(6, 6), shape_type="rectangle")
-    roi_manager.register()
-    roi_manager.add(_rectangle(9, 6), shape_type="rectangle")
+    roi_manager.register(_rectangle(6, 6), shape_type="rectangle")
+    roi_manager.register(_rectangle(9, 6), shape_type="rectangle")
     roi_manager.set_show_all(True)
-    roi_manager.register()
     roi_manager.select(0)
     roi_manager.set_show_all(False)
+
+
+def test_remove_during_not_show_all(make_napari_viewer: Callable[[], napari.Viewer]):
+    viewer = make_napari_viewer()
+    roi_manager = QRoiManager(viewer)
+    roi_manager.register(_rectangle(0, 0), shape_type="rectangle")
+    roi_manager.register(_rectangle(6, 6), shape_type="rectangle")
+    roi_manager.register(_rectangle(9, 6), shape_type="rectangle")
+    roi_manager.set_show_all(False)
+    roi_manager._roilist.selectRow(2)
+    roi_manager._btns._remove_roi_btn.click()
+    assert roi_manager._layer.roi_count() == 2
+    assert roi_manager._roilist.rowCount() == 2
+    roi_manager.set_show_all(True)
+    roi_manager.set_show_all(False)
+    roi_manager._roilist.selectAll()
+    roi_manager._btns._remove_roi_btn.click()
+    assert roi_manager._layer.roi_count() == 0
+    assert roi_manager._roilist.rowCount() == 0
+    roi_manager.set_show_all(True)
+
+    roi_manager.register(_rectangle(0, 0), shape_type="rectangle")
+    roi_manager.register(_rectangle(6, 6), shape_type="ellipse")
+    roi_manager.register(_rectangle(9, 6), shape_type="rectangle")
+    roi_manager.register(_rectangle(9, 9), shape_type="ellipse")
+    roi_manager.set_show_all(False)
+
+    roi_manager._roilist.selectRow(2)
+    roi_manager._btns._remove_roi_btn.click()
+    roi_manager._roilist.selectRow(0)
+    roi_manager._btns._remove_roi_btn.click()
+    assert roi_manager._layer.roi_count() == 2
+    assert roi_manager._roilist.rowCount() == 2
+    roi_manager.set_show_all(True)
+    assert roi_manager._layer.roi_count() == 2
+    assert roi_manager._roilist.rowCount() == 2

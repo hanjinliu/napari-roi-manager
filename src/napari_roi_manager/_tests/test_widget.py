@@ -1,3 +1,5 @@
+import tempfile
+from pathlib import Path
 from typing import Callable
 
 import napari
@@ -90,3 +92,16 @@ def test_remove_during_not_show_all(make_napari_viewer: Callable[[], napari.View
     roi_manager.set_show_all(True)
     assert roi_manager._layer.roi_count() == 2
     assert roi_manager._roilist.rowCount() == 2
+
+
+def test_read_write(make_napari_viewer: Callable[[], napari.Viewer]):
+    viewer = make_napari_viewer()
+    roi_manager = QRoiManager(viewer)
+    roi_manager.load_roiset(
+        path=Path(__file__).parent / "_test_roiset.json", append=False
+    )
+    roi_manager.load_roiset(
+        path=Path(__file__).parent / "_test_roiset.json", append=True
+    )
+    with tempfile.TemporaryDirectory() as tmpdir:
+        roi_manager.save_roiset(path=Path(tmpdir) / "test_save_roiset.json")

@@ -15,11 +15,19 @@ class QRoiManagerButtons(QtW.QWidget):
         layout = QtW.QVBoxLayout(self)
         layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
 
+        # button widgets
         self._add_roi_btn = QtW.QPushButton("Add", self)
+        self._add_roi_btn.setToolTip("Add the current ROI to the manager.")
         self._remove_roi_btn = QtW.QPushButton("Remove", self)
+        self._add_roi_btn.setToolTip("Remove selected ROI from the manager.")
+        self._specify_btn = QtW.QPushButton("Specify", self)
+        self._specify_btn.setToolTip("Specify the shape/position of the ROI.")
         self._load_roiset_btn = QtW.QPushButton("Load", self)
+        self._load_roiset_btn.setToolTip("Load ROIs from a file.")
         self._save_roiset_btn = QtW.QPushButton("Save", self)
+        self._save_roiset_btn.setToolTip("Save ROIs to a file.")
         self._to_shapes_btn = QtW.QPushButton("To Shapes", self)
+        self._to_shapes_btn.setToolTip("Convert ROIs to the builtin shapes layer.")
 
         # text related
         self._text_group = QtW.QGroupBox("ROI Text")
@@ -37,8 +45,11 @@ class QRoiManagerButtons(QtW.QWidget):
 
         self._show_all_checkbox = QtW.QCheckBox("Show All", self)
         self._show_all_checkbox.setChecked(True)
+
+        # add all the widgets
         layout.addWidget(self._add_roi_btn)
         layout.addWidget(self._remove_roi_btn)
+        layout.addWidget(self._specify_btn)
         layout.addWidget(self._load_roiset_btn)
         layout.addWidget(self._save_roiset_btn)
         layout.addWidget(self._to_shapes_btn)
@@ -139,6 +150,7 @@ class QRoiManager(QtW.QWidget):
         roilist = self._roilist
         btns._add_roi_btn.clicked.connect(layer.register_roi)
         btns._remove_roi_btn.clicked.connect(self._remove_button_clicked)
+        btns._specify_btn.clicked.connect(self.specify_roi)
         btns._load_roiset_btn.clicked.connect(self.load_roiset)
         btns._save_roiset_btn.clicked.connect(self.save_roiset)
         btns._text_feature_name.currentIndexChanged.connect(self.set_text_feature_name)
@@ -191,6 +203,12 @@ class QRoiManager(QtW.QWidget):
         if indices is not None:
             self._layer.selected_data = set(indices)
         self._layer.remove_selected()
+
+    def specify_roi(self):
+        from napari_roi_manager.widgets._dialogs import QSpecifyDialog
+
+        dlg = QSpecifyDialog(self._layer, self)
+        dlg.exec_()
 
     def _remove_button_clicked(self):
         if self._layer.show_all:

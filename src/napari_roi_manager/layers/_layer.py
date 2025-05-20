@@ -13,7 +13,7 @@ from napari.layers import Shapes
 from napari.layers.base import ActionType
 from napari.utils.events import Event
 
-from napari_roi_manager.layers._dataclasses import HiddenShapes, RoiData
+from napari_roi_manager._dataclasses import HiddenShapes, RoiData
 
 if TYPE_CHECKING:
     from napari_roi_manager.widgets._roi_manager import QRoiManager

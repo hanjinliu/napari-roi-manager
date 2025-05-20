@@ -69,3 +69,20 @@ class RoiData:
         shape_type = js["shape_type"]
         names = js.get("names")
         return RoiData(data, shape_type=shape_type, names=names)
+
+    def iter_shapes(self):
+        """Iterate over shapes and their types."""
+        for i in range(len(self.data)):
+            yield RoiTuple(
+                data=self.data[i],
+                shape_type=self.shape_type[i],
+                name=self.names[i] if self.names is not None else None,
+            )
+
+
+@dataclass
+class RoiTuple:
+    data: NDArray[np.number]
+    shape_type: str
+    name: str | None = None
+    multidim: tuple[int, ...] = ()

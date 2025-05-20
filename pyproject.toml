@@ -30,6 +30,7 @@ classifiers = [
 dependencies = [
     "numpy",
     "qtpy",
+    "roifile",
 ]
 
 [project.optional-dependencies]

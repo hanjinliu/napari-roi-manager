@@ -9,13 +9,13 @@ contributions:
     - id: napari-roi-manager.make_qwidget
       python_name: napari_roi_manager:QRoiManager
       title: Open ROI manager widget
-    - id: napari-roi-manager.read_roi
-      python_name: napari_roi_manager:read_roi
+    - id: napari-roi-manager.read_roi_provider
+      python_name: napari_roi_manager:read_roi_provider
       title: Read ROI file
   widgets:
     - command: napari-roi-manager.make_qwidget
       display_name: ROI Manager
   readers:
-    - command: napari-roi-manager.read_roi
+    - command: napari-roi-manager.read_roi_provider
       filename_patterns: ['*.roi', '*.zip']
       accepts_directories: false

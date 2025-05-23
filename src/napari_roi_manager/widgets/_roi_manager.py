@@ -179,7 +179,8 @@ class QRoiManager(QtW.QWidget):
         @layer.events.roi_added.connect
         def _roi_added(event):
             tp = event.shape_type
-            roilist.addRow(f"ROI-{event.index:>04}", tp)
+            name = getattr(event, "name", f"ROI-{event.index:>04}")
+            roilist.addRow(name, tp)
 
         @layer.events.roi_removed.connect
         def _roi_removed(event):
@@ -255,7 +256,7 @@ class QRoiManager(QtW.QWidget):
             file = QtW.QFileDialog.getOpenFileName(
                 self,
                 "Open ROIs",
-                filter="JSON (*.json);;Text (*.txt);;ImageJ ROI (*.roi;*.zip);;All Files (*)",
+                filter="JSON (*.json;*.txt);;ImageJ ROI (*.roi;*.zip);;All Files (*)",
             )
             if file:
                 path = file[0]
@@ -288,7 +289,7 @@ class QRoiManager(QtW.QWidget):
             file = QtW.QFileDialog.getSaveFileName(
                 self,
                 "Save ROIs",
-                filter="JSON (*.json);;Text (*.txt);;ImageJ ROI (*.zip);;All Files (*)",
+                filter="JSON (*.json;*.txt);;ImageJ ROI (*.zip);;All Files (*)",
             )
             if file:
                 path = file[0]
@@ -309,20 +310,31 @@ class QRoiManager(QtW.QWidget):
         else:
             shapes = [roi_to_shape(ijrois)]
         n_multi_dims = self._viewer.dims.ndim - 2
-        for shape in shapes:
-            if shape is None:
-                continue
-            ndata = shape.data.shape[0]
-            multi_dim_coords = np.empty((ndata, n_multi_dims), dtype=shape.data.dtype)
-            multi_dim_coords[:] = shape.multidim[-n_multi_dims:]
-            coords = np.stack([multi_dim_coords, shape.data], axis=1)
-            self.add(coords, shape.shape_type)
-            self._roilist.item(self._roilist.rowCount(), 0).setText(shape.name)
+        with self._layer.events.data.blocker():
+            for idx, shape in enumerate(shapes):
+                if shape is None:
+                    continue
+                ndata = shape.data.shape[0]
+                if n_multi_dims > 0:
+                    multi_dim_coords = np.empty(
+                        (ndata, n_multi_dims), dtype=shape.data.dtype
+                    )
+                    multi_dim_coords[:] = shape.multidim[n_multi_dims:]
+                    coords = np.stack([multi_dim_coords, shape.data], axis=1)
+                else:
+                    coords = shape.data
+                self._layer.add(coords, shape_type=shape.shape_type)
+                self._layer.events.roi_added(
+                    index=idx, shape_type=shape.shape_type, name=shape.name
+                )
+        return self._layer
 
     def write_ij_roi(self, path):
         path = Path(path)
         if path.suffix != ".zip":
             path = path.with_suffix(".zip")
+        if path.exists():
+            path.unlink()
         rois = [
             shape_to_roi(shape) for shape in self._layer.get_roi_data().iter_shapes()
         ]

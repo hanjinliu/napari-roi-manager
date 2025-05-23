@@ -2,7 +2,7 @@ import warnings
 
 import numpy as np
 from numpy.typing import NDArray
-from roifile import ROI_OPTIONS, ROI_SUBTYPE, ROI_TYPE, ImagejRoi
+from roifile import ROI_SUBTYPE, ROI_TYPE, ImagejRoi
 
 from napari_roi_manager._dataclasses import RoiTuple
 
@@ -18,15 +18,15 @@ def roi_to_shape(ijroi: ImagejRoi) -> RoiTuple | None:
     if ijroi.subtype == ROI_SUBTYPE.UNDEFINED:
         if ijroi.roitype == ROI_TYPE.RECT:
             if ijroi.subpixelresolution:
-                x = (ijroi.xd,)
-                y = (ijroi.yd,)
-                width = (ijroi.widthd,)
-                height = (ijroi.heightd,)
+                x = ijroi.xd
+                y = ijroi.yd
+                width = ijroi.widthd
+                height = ijroi.heightd
             else:
-                x = (ijroi.left,)
-                y = (ijroi.top,)
-                width = (ijroi.right - ijroi.left,)
-                height = (ijroi.bottom - ijroi.top,)
+                x = ijroi.left
+                y = ijroi.top
+                width = ijroi.right - ijroi.left
+                height = ijroi.bottom - ijroi.top
             out = RoiTuple(
                 data=[
                     [[y, x], [y, x + width], [y + height, x + width], [y + height, x]],
@@ -36,8 +36,8 @@ def roi_to_shape(ijroi: ImagejRoi) -> RoiTuple | None:
                 multidim=multidim,
             )
         elif ijroi.roitype == ROI_TYPE.LINE:
-            start = (ijroi.x1 - 1, ijroi.y1 - 1)
-            end = (ijroi.x2 - 1, ijroi.y2 - 1)
+            start = (ijroi.y1 - 1, ijroi.x1 - 1)
+            end = (ijroi.y2 - 1, ijroi.x2 - 1)
             out = RoiTuple(
                 data=[start, end],
                 shape_type="line",
@@ -112,81 +112,97 @@ def roi_to_shape(ijroi: ImagejRoi) -> RoiTuple | None:
     return out
 
 
-def shape_to_roi(
-    shape: RoiTuple,
-) -> ImagejRoi:
+def shape_to_roi(shape: RoiTuple) -> ImagejRoi:
     """Convert a shape to an ImageJ ROI."""
+    ys = shape.data[:, -2]
+    xs = shape.data[:, -1]
     if shape.shape_type == "rectangle":
-        ys = shape.data[:, -2]
-        xs = shape.data[:, -1]
         if ys[0] == ys[1] or xs[0] == xs[1]:
             # not rotated
             y0, y1 = ys.min(), ys.max()
             x0, x1 = xs.min(), xs.max()
-            return ImagejRoi(
-                roitype=ROI_TYPE.RECT,
+            roi = ImagejRoi.frompoints(
+                np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]),
                 name=shape.name,
-                options=ROI_OPTIONS.SUB_PIXEL_RESOLUTION,
-                yd=y0,
-                xd=x0,
-                widthd=x1 - x0,
-                heightd=y1 - y0,
                 **_get_multidim_kwargs(shape),
             )
+            roi.roitype = ROI_TYPE.RECT
+            roi.y1 = roi.yd = y0
+            roi.x1 = roi.xd = x0
+            roi.y2 = y1
+            roi.x2 = x1
+            roi.widthd = x1 - x0
+            roi.heightd = y1 - y0
         else:
-            return ImagejRoi(
-                roitype=ROI_TYPE.FREEHAND,
-                subtype=ROI_SUBTYPE.ROTATED_RECT,
-                options=ROI_OPTIONS.SUB_PIXEL_RESOLUTION,
+            roi = ImagejRoi.frompoints(
+                np.stack([xs, ys], axis=1) + 1,
                 name=shape.name,
-                subpixel_coordinates=np.stack([xs, ys], axis=1),
                 **_get_multidim_kwargs(shape),
             )
+            roi.roitype = ROI_TYPE.FREEHAND
+            roi.subtype = ROI_SUBTYPE.ROTATED_RECT
+            roi.x1 = xs[1:3].mean() + 1
+            roi.y1 = ys[1:3].mean() + 1
+            roi.x2 = xs[:4:3].mean() + 1
+            roi.y2 = ys[:4:3].mean() + 1
+            # roi.arrow_style_or_aspect_ratio = 65
+            # roi.arrow_head_size = 135
+        return roi
     elif shape.shape_type == "line":
-        start, end = shape.data
-        return ImagejRoi(
-            roitype=ROI_TYPE.LINE,
+        roi = ImagejRoi.frompoints(
+            np.stack([xs, ys], axis=1) + 1,
             name=shape.name,
-            x1=start[1] + 1,
-            y1=start[0] + 1,
-            x2=end[1] + 1,
-            y2=end[0] + 1,
-            position=shape.multidim[0],
-            t_position=shape.multidim[1],
-            z_position=shape.multidim[2],
+            **_get_multidim_kwargs(shape),
         )
+        roi.x1 = xs[0] + 1
+        roi.y1 = ys[0] + 1
+        roi.x2 = xs[1] + 1
+        roi.y2 = ys[1] + 1
+        roi.roitype = ROI_TYPE.LINE
+        return roi
     elif shape.shape_type == "path":
-        coords = shape.data
-        return ImagejRoi(
-            roitype=ROI_TYPE.LINE,
+        roi = ImagejRoi.frompoints(
+            np.stack([xs, ys], axis=1) + 1,
             name=shape.name,
-            subpixel_coordinates=coords[:, ::-1] + 1,
             **_get_multidim_kwargs(shape),
         )
+        roi.roitype = ROI_TYPE.POLYLINE
+        return roi
     elif shape.shape_type == "polygon":
-        coords = shape.data
-        return ImagejRoi(
-            roitype=ROI_TYPE.POLYGON,
+        roi = ImagejRoi.frompoints(
+            np.stack([xs, ys], axis=1) + 1,
             name=shape.name,
-            options=ROI_OPTIONS.SUB_PIXEL_RESOLUTION,
-            subpixel_coordinates=coords[:, ::-1] + 1,
             **_get_multidim_kwargs(shape),
         )
+        roi.roitype = ROI_TYPE.POLYGON
+        return roi
     elif shape.shape_type == "ellipse":
-        ys = shape.data[:, -2]
-        xs = shape.data[:, -1]
-        y0, y1 = ys.min(), ys.max()
-        x0, x1 = xs.min(), xs.max()
-        return ImagejRoi(
-            roitype=ROI_TYPE.OVAL,
-            name=shape.name,
-            options=ROI_OPTIONS.SUB_PIXEL_RESOLUTION,
-            yd=y0,
-            xd=x0,
-            widthd=x1 - x0,
-            heightd=y1 - y0,
-            **_get_multidim_kwargs(shape),
-        )
+        if ys[0] == ys[1] or xs[0] == xs[1]:
+            # not rotated
+            y0, y1 = ys.min(), ys.max()
+            x0, x1 = xs.min(), xs.max()
+            roi = ImagejRoi.frompoints(
+                np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]),
+                name=shape.name,
+                **_get_multidim_kwargs(shape),
+            )
+            roi.roitype = ROI_TYPE.OVAL
+            roi.y1 = roi.yd = y0
+            roi.x1 = roi.xd = x0
+            roi.y2 = y1
+            roi.x2 = x1
+            roi.widthd = x1 - x0
+            roi.heightd = y1 - y0
+        else:
+            roi = ImagejRoi.frompoints(
+                np.stack([xs, ys], axis=1),
+                name=shape.name,
+                **_get_multidim_kwargs(shape),
+            )
+            roi.roitype = ROI_TYPE.FREEHAND
+            roi.subtype = ROI_SUBTYPE.ELLIPSE
+            raise NotImplementedError
+        return roi
     raise ValueError(f"Unsupported shape type: {shape.shape_type}")
 
 
@@ -203,15 +219,15 @@ def _get_multidim_kwargs(shape: RoiTuple) -> dict[str, int]:
     if len(shape.multidim) == 0:
         return {}
     if len(shape.multidim) == 1:
-        return {"z_position": shape.multidim[0]}
+        return {"z": shape.multidim[0]}
     if len(shape.multidim) == 2:
         return {
-            "t_position": shape.multidim[0],
-            "z_position": shape.multidim[1],
+            "t": shape.multidim[0],
+            "z": shape.multidim[1],
         }
     else:
         return {
             "position": shape.multidim[0],
-            "t_position": shape.multidim[1],
-            "z_position": shape.multidim[2],
+            "t": shape.multidim[1],
+            "z": shape.multidim[2],
         }

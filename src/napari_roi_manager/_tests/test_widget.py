@@ -105,3 +105,7 @@ def test_read_write(make_napari_viewer: Callable[[], napari.Viewer]):
     )
     with tempfile.TemporaryDirectory() as tmpdir:
         roi_manager.save_roiset(path=Path(tmpdir) / "test_save_roiset.json")
+
+
+def test_ij_rois():
+    ...

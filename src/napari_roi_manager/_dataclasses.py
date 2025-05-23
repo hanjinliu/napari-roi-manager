@@ -86,3 +86,6 @@ class RoiTuple:
     shape_type: str
     name: str | None = None
     multidim: tuple[int, ...] = ()
+
+    def __post_init__(self):
+        self.data = np.asarray(self.data)

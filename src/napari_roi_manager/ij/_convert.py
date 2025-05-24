@@ -1,3 +1,4 @@
+import struct
 import warnings
 
 import numpy as np
@@ -145,8 +146,12 @@ def shape_to_roi(shape: RoiTuple) -> ImagejRoi:
             roi.y1 = ys[1:3].mean() + 1
             roi.x2 = xs[:4:3].mean() + 1
             roi.y2 = ys[:4:3].mean() + 1
-            # roi.arrow_style_or_aspect_ratio = 65
-            # roi.arrow_head_size = 135
+            width = np.sqrt((xs[1] - xs[2]) ** 2 + (ys[1] - ys[2]) ** 2)
+            (
+                roi.arrow_style_or_aspect_ratio,
+                roi.arrow_head_size,
+                roi.rounded_rect_arc_size,
+            ) = encode_rotated_roi_width(width, roi.byteorder)
         return roi
     elif shape.shape_type == "line":
         roi = ImagejRoi.frompoints(
@@ -231,3 +236,8 @@ def _get_multidim_kwargs(shape: RoiTuple) -> dict[str, int]:
             "t": shape.multidim[1],
             "z": shape.multidim[2],
         }
+
+
+def encode_rotated_roi_width(width: float, byteorder: str) -> tuple[int, int, int]:
+    s = struct.pack(byteorder + "f", width)
+    return struct.unpack(byteorder + "BBh", s)

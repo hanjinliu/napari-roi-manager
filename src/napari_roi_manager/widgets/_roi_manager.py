@@ -171,7 +171,7 @@ class QRoiManager(QtW.QWidget):
         btns._text_font_size.valueChanged.connect(self.set_text_font_size)
         btns._to_shapes_btn.clicked.connect(self.as_shapes_layer)
 
-        @btns._show_all_checkbox.checkStateChanged.connect
+        @btns._show_all_checkbox.stateChanged.connect
         def _show_all_changed(state):
             layer.show_all = btns._show_all_checkbox.isChecked()
 

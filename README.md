@@ -12,6 +12,7 @@ A ROI Manager Widget with an UI similar to ImageJ.
 ![](https://github.com/hanjinliu/napari-roi-manager/blob/main/images/demo.gif)
 
 &check; The layer is just a Shapes layer, so it is compatible with any other plugins.
+
 &check; Supports importing and exporting ImageJ ROI files.
 
 ----------------------------------

@@ -238,7 +238,6 @@ class RoiManagerLayer(Shapes):
         if show_all:  # "show all" checked
             self.selected_data = set()
             old_shape_type = self.shape_type
-            print(len(self._hidden_shapes.data), len(self.data))
             self.data = self._hidden_shapes.data + self.data
             self.features = pd.concat([self._hidden_shapes.features, self.features])
             if self._hidden_shapes.shape_type + old_shape_type:

@@ -131,6 +131,7 @@ class QRoiManager(QtW.QWidget):
     def __init__(self, viewer: napari.Viewer):
         self._viewer = viewer
         super().__init__()
+        self.setAcceptDrops(True)
 
         layout = QtW.QHBoxLayout(self)
 
@@ -328,7 +329,7 @@ class QRoiManager(QtW.QWidget):
                 self._layer.events.roi_added(
                     index=idx, shape_type=shape.shape_type, name=shape.name
                 )
-        return self._layer
+        return []
 
     def write_ij_roi(self, path):
         path = Path(path)
@@ -340,3 +341,22 @@ class QRoiManager(QtW.QWidget):
             shape_to_roi(shape) for shape in self._layer.get_roi_data().iter_shapes()
         ]
         roiwrite(path, rois)
+
+    def dragEnterEvent(self, a0):
+        if a0.mimeData().hasUrls():
+            a0.accept()
+        else:
+            a0.ignore()
+
+    def dropEvent(self, a0):
+        if a0.mimeData().hasUrls():
+            urls = a0.mimeData().urls()
+            for url in urls:
+                path = Path(url.toLocalFile())
+                if path.suffix in (".zip", ".roi"):
+                    self.read_ij_roi(path, append=True)
+                else:
+                    self._layer.update_from_json(path, append=True)
+            a0.accept()
+        else:
+            a0.ignore()

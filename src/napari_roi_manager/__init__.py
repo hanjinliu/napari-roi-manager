@@ -1,6 +1,5 @@
-__version__ = "0.0.5"
+__version__ = "0.0.6"
 
-from .ij import read_roi_provider
 from .widgets import QRoiManager
 
-__all__ = ["QRoiManager", "read_roi_provider"]
+__all__ = ["QRoiManager"]

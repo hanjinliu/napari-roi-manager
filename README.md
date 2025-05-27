@@ -7,11 +7,12 @@
 [![codecov](https://codecov.io/gh/hanjinliu/napari-roi-manager/branch/main/graph/badge.svg)](https://codecov.io/gh/hanjinliu/napari-roi-manager)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-roi-manager)](https://napari-hub.org/plugins/napari-roi-manager)
 
-A ROI Manager Widget with an UI similar to ImageJ
+A ROI Manager Widget with an UI similar to ImageJ.
 
 ![](https://github.com/hanjinliu/napari-roi-manager/blob/main/images/demo.gif)
 
-This Plugin requires `napari>=0.4.19`.
+&check; The layer is just a Shapes layer, so it is compatible with any other plugins.
+&check; Supports importing and exporting ImageJ ROI files.
 
 ----------------------------------
 

@@ -31,10 +31,10 @@ class HiddenShapes:
         current_item: int | None,
         display_text: bool = False,
     ):
-        self.data = data
+        self.data = data.copy()
         self.features = features
-        self.shape_type = shape_type
-        self.selected_data = selected_data
+        self.shape_type = shape_type.copy()
+        self.selected_data = selected_data.copy()
         self.current_item = current_item
         self.display_text = display_text
 
@@ -69,3 +69,23 @@ class RoiData:
         shape_type = js["shape_type"]
         names = js.get("names")
         return RoiData(data, shape_type=shape_type, names=names)
+
+    def iter_shapes(self):
+        """Iterate over shapes and their types."""
+        for i in range(len(self.data)):
+            yield RoiTuple(
+                data=self.data[i],
+                shape_type=self.shape_type[i],
+                name=self.names[i] if self.names is not None else None,
+            )
+
+
+@dataclass
+class RoiTuple:
+    data: NDArray[np.number]
+    shape_type: str
+    name: str | None = None
+    multidim: tuple[int, ...] = ()
+
+    def __post_init__(self):
+        self.data = np.asarray(self.data)

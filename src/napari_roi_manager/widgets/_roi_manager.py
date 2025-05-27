@@ -1,9 +1,13 @@
 from collections.abc import Iterable
+from pathlib import Path
 
 import napari
+import numpy as np
 from qtpy import QtCore
 from qtpy import QtWidgets as QtW
+from roifile import roiread, roiwrite
 
+from napari_roi_manager.ij._convert import roi_to_shape, shape_to_roi
 from napari_roi_manager.layers import RoiManagerLayer
 from napari_roi_manager.widgets._dialogs import QCustomDialog
 
@@ -127,9 +131,9 @@ class QRoiManager(QtW.QWidget):
     def __init__(self, viewer: napari.Viewer):
         self._viewer = viewer
         super().__init__()
+        self.setAcceptDrops(True)
 
-        layout = QtW.QHBoxLayout()
-        self.setLayout(layout)
+        layout = QtW.QHBoxLayout(self)
 
         layer = RoiManagerLayer(name="ROIs", roi_manager=self)
         viewer.add_layer(layer)
@@ -145,6 +149,17 @@ class QRoiManager(QtW.QWidget):
         self.connect_layer(layer)
         self._layer = layer
 
+    @classmethod
+    def get_or_create(cls):
+        """Get the RoiManager from the viewer or create a new one."""
+        viewer = napari.current_viewer()
+        if viewer is None:
+            raise RuntimeError("No active viewer found.")
+        for dock_widget in viewer.window._dock_widgets.values():
+            if isinstance(inner := dock_widget.widget(), cls):
+                return inner
+        return cls(viewer)
+
     def connect_layer(self, layer: RoiManagerLayer):
         btns = self._btns
         roilist = self._roilist
@@ -158,13 +173,14 @@ class QRoiManager(QtW.QWidget):
         btns._to_shapes_btn.clicked.connect(self.as_shapes_layer)
 
         @btns._show_all_checkbox.stateChanged.connect
-        def _show_all_changed(val):
-            layer.show_all = val == QtCore.Qt.CheckState.Checked
+        def _show_all_changed(state):
+            layer.show_all = btns._show_all_checkbox.isChecked()
 
         @layer.events.roi_added.connect
         def _roi_added(event):
             tp = event.shape_type
-            roilist.addRow(f"ROI-{event.index:>04}", tp)
+            name = getattr(event, "name", f"ROI-{event.index:>04}")
+            roilist.addRow(name, tp)
 
         @layer.events.roi_removed.connect
         def _roi_removed(event):
@@ -176,7 +192,7 @@ class QRoiManager(QtW.QWidget):
         def _roi_selected(indices):
             layer._remove_current()
             if layer.show_all:
-                layer.selected_data = set(indices)
+                layer._safe_set_selected_data(indices)
 
         @roilist.renamed.connect
         def _roi_renamed(index: int, name: str):
@@ -197,18 +213,18 @@ class QRoiManager(QtW.QWidget):
     def select(self, indices=()):
         if not isinstance(indices, Iterable):
             indices = {indices}
-        self._layer.selected_data = set(indices)
+        self._layer._safe_set_selected_data(indices)
 
     def remove(self, indices=None):
         if indices is not None:
-            self._layer.selected_data = set(indices)
+            self._layer._safe_set_selected_data(indices)
         self._layer.remove_selected()
 
     def specify_roi(self):
         from napari_roi_manager.widgets._dialogs import QSpecifyDialog
 
         dlg = QSpecifyDialog(self._layer, self)
-        dlg.exec_()
+        dlg.exec()
 
     def _remove_button_clicked(self):
         if self._layer.show_all:
@@ -240,7 +256,7 @@ class QRoiManager(QtW.QWidget):
             file = QtW.QFileDialog.getOpenFileName(
                 self,
                 "Open ROIs",
-                filter="JSON (*.json);;Text (*.txt);;All Files (*)",
+                filter="JSON (*.json;*.txt);;ImageJ ROI (*.roi;*.zip);;All Files (*)",
             )
             if file:
                 path = file[0]
@@ -262,14 +278,18 @@ class QRoiManager(QtW.QWidget):
                     append = False
                 elif res is None or res == "Cancel":
                     return
-        self._layer.update_from_json(path, append=append)
+        path = Path(path)
+        if path.suffix in (".zip", ".roi"):
+            self.read_ij_roi(path, append=append)
+        else:
+            self._layer.update_from_json(path, append=append)
 
     def save_roiset(self, *, path=None):
         if path is None:
             file = QtW.QFileDialog.getSaveFileName(
                 self,
                 "Save ROIs",
-                filter="JSON (*.json);;Text (*.txt);;All Files (*)",
+                filter="JSON (*.json;*.txt);;ImageJ ROI (*.zip);;All Files (*)",
             )
             if file:
                 path = file[0]
@@ -277,4 +297,66 @@ class QRoiManager(QtW.QWidget):
                     return
             else:
                 return
-        self._layer.write_json(path)
+        path = Path(path)
+        if path.suffix in (".zip",):
+            self.write_ij_roi(path)
+        else:
+            self._layer.write_json(path)
+
+    def read_ij_roi(self, path, append: bool = True):
+        ijrois = roiread(path)
+        if isinstance(ijrois, list):
+            shapes = [roi_to_shape(roi) for roi in ijrois]
+        else:
+            shapes = [roi_to_shape(ijrois)]
+        if not append:
+            self._layer._initialize_layer()
+        n_multi_dims = self._viewer.dims.ndim - 2
+        with self._layer.events.data.blocker():
+            for idx, shape in enumerate(shapes):
+                if shape is None:
+                    continue
+                ndata = shape.data.shape[0]
+                if n_multi_dims > 0:
+                    multi_dim_coords = np.empty(
+                        (ndata, n_multi_dims), dtype=shape.data.dtype
+                    )
+                    multi_dim_coords[:] = shape.multidim[n_multi_dims:]
+                    coords = np.stack([multi_dim_coords, shape.data], axis=1)
+                else:
+                    coords = shape.data
+                self._layer.add(coords, shape_type=shape.shape_type)
+                self._layer.events.roi_added(
+                    index=idx, shape_type=shape.shape_type, name=shape.name
+                )
+        return []
+
+    def write_ij_roi(self, path):
+        path = Path(path)
+        if path.suffix != ".zip":
+            path = path.with_suffix(".zip")
+        if path.exists():
+            path.unlink()
+        rois = [
+            shape_to_roi(shape) for shape in self._layer.get_roi_data().iter_shapes()
+        ]
+        roiwrite(path, rois)
+
+    def dragEnterEvent(self, a0):
+        if a0.mimeData().hasUrls():
+            a0.accept()
+        else:
+            a0.ignore()
+
+    def dropEvent(self, a0):
+        if a0.mimeData().hasUrls():
+            urls = a0.mimeData().urls()
+            for url in urls:
+                path = Path(url.toLocalFile())
+                if path.suffix in (".zip", ".roi"):
+                    self.read_ij_roi(path, append=True)
+                else:
+                    self._layer.update_from_json(path, append=True)
+            a0.accept()
+        else:
+            a0.ignore()

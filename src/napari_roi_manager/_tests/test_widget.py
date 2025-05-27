@@ -1,11 +1,13 @@
-import tempfile
 from pathlib import Path
 from typing import Callable
 
 import napari
 import numpy as np
+from numpy.testing import assert_allclose
 
 from napari_roi_manager import QRoiManager
+
+_TEST_PATH = Path(__file__).parent
 
 
 def _rectangle(y, x, size: float = 2):
@@ -94,14 +96,26 @@ def test_remove_during_not_show_all(make_napari_viewer: Callable[[], napari.View
     assert roi_manager._roilist.rowCount() == 2
 
 
-def test_read_write(make_napari_viewer: Callable[[], napari.Viewer]):
+def test_read_write(make_napari_viewer: Callable[[], napari.Viewer], tmpdir):
     viewer = make_napari_viewer()
     roi_manager = QRoiManager(viewer)
-    roi_manager.load_roiset(
-        path=Path(__file__).parent / "_test_roiset.json", append=False
-    )
-    roi_manager.load_roiset(
-        path=Path(__file__).parent / "_test_roiset.json", append=True
-    )
-    with tempfile.TemporaryDirectory() as tmpdir:
-        roi_manager.save_roiset(path=Path(tmpdir) / "test_save_roiset.json")
+    roi_manager.load_roiset(path=_TEST_PATH / "_test_roiset.json", append=False)
+    roi_manager.load_roiset(path=_TEST_PATH / "_test_roiset.json", append=True)
+    roi_manager.save_roiset(path=Path(tmpdir, "test_save_roiset.json"))
+
+
+def test_ij_rois(make_napari_viewer: Callable[[], napari.Viewer], tmpdir):
+    viewer = make_napari_viewer()
+    roi_manager = QRoiManager(viewer)
+    roi_manager.load_roiset(path=_TEST_PATH / "test-rois.zip", append=True)
+    data0 = roi_manager._layer.data.copy()
+    roi_manager.save_roiset(path=Path(tmpdir, "test_save_roiset.zip"))
+    roi_manager.load_roiset(path=Path(tmpdir, "test_save_roiset.zip"), append=False)
+    data1 = roi_manager._layer.data.copy()
+    assert len(data0) == len(data1)
+    assert_allclose(data0[0], data1[0], rtol=1e-5, atol=1e-8)
+    assert_allclose(data0[1], data1[1], rtol=1e-5, atol=1e-8)
+    assert_allclose(data0[2], data1[2], rtol=1e-5, atol=1e-8)
+    assert_allclose(data0[3], data1[3], rtol=1e-5, atol=1e-8)
+    assert_allclose(data0[4], data1[4], rtol=1e-5, atol=1e-8)
+    assert_allclose(data0[5], data1[5], rtol=1e-5, atol=1e-8)

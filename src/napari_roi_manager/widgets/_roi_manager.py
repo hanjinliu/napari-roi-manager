@@ -132,8 +132,7 @@ class QRoiManager(QtW.QWidget):
         self._viewer = viewer
         super().__init__()
 
-        layout = QtW.QHBoxLayout()
-        self.setLayout(layout)
+        layout = QtW.QHBoxLayout(self)
 
         layer = RoiManagerLayer(name="ROIs", roi_manager=self)
         viewer.add_layer(layer)
@@ -172,9 +171,9 @@ class QRoiManager(QtW.QWidget):
         btns._text_font_size.valueChanged.connect(self.set_text_font_size)
         btns._to_shapes_btn.clicked.connect(self.as_shapes_layer)
 
-        @btns._show_all_checkbox.stateChanged.connect
-        def _show_all_changed(val):
-            layer.show_all = val == QtCore.Qt.CheckState.Checked
+        @btns._show_all_checkbox.checkStateChanged.connect
+        def _show_all_changed(state):
+            layer.show_all = btns._show_all_checkbox.isChecked()
 
         @layer.events.roi_added.connect
         def _roi_added(event):
@@ -192,7 +191,7 @@ class QRoiManager(QtW.QWidget):
         def _roi_selected(indices):
             layer._remove_current()
             if layer.show_all:
-                layer.selected_data = set(indices)
+                layer._safe_set_selected_data(indices)
 
         @roilist.renamed.connect
         def _roi_renamed(index: int, name: str):
@@ -213,18 +212,18 @@ class QRoiManager(QtW.QWidget):
     def select(self, indices=()):
         if not isinstance(indices, Iterable):
             indices = {indices}
-        self._layer.selected_data = set(indices)
+        self._layer._safe_set_selected_data(indices)
 
     def remove(self, indices=None):
         if indices is not None:
-            self._layer.selected_data = set(indices)
+            self._layer._safe_set_selected_data(indices)
         self._layer.remove_selected()
 
     def specify_roi(self):
         from napari_roi_manager.widgets._dialogs import QSpecifyDialog
 
         dlg = QSpecifyDialog(self._layer, self)
-        dlg.exec_()
+        dlg.exec()
 
     def _remove_button_clicked(self):
         if self._layer.show_all:
@@ -280,7 +279,7 @@ class QRoiManager(QtW.QWidget):
                     return
         path = Path(path)
         if path.suffix in (".zip", ".roi"):
-            self.read_ij_roi(path)
+            self.read_ij_roi(path, append=append)
         else:
             self._layer.update_from_json(path, append=append)
 
@@ -303,12 +302,14 @@ class QRoiManager(QtW.QWidget):
         else:
             self._layer.write_json(path)
 
-    def read_ij_roi(self, path):
+    def read_ij_roi(self, path, append: bool = True):
         ijrois = roiread(path)
         if isinstance(ijrois, list):
             shapes = [roi_to_shape(roi) for roi in ijrois]
         else:
             shapes = [roi_to_shape(ijrois)]
+        if not append:
+            self._layer._initialize_layer()
         n_multi_dims = self._viewer.dims.ndim - 2
         with self._layer.events.data.blocker():
             for idx, shape in enumerate(shapes):

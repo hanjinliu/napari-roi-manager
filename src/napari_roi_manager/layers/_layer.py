@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import weakref
+from collections.abc import Iterable
 from contextlib import nullcontext
 from enum import Enum
 from pathlib import Path
@@ -98,7 +99,12 @@ class RoiManagerLayer(Shapes):
         df["id"] = np.arange(df.shape[0], dtype=np.uint32)
         self.features = df
 
-    def _remove_current(self):
+    def _safe_set_selected_data(self, selected_data: Iterable[int]) -> None:
+        """Safely select data, ensuring it does not exceed the number of shapes."""
+        selected_data = {i for i in selected_data if i < self.nshapes}
+        self.selected_data = selected_data
+
+    def _remove_current(self) -> bool:
         if self._current_item is not None:
             with self.events.data.blocker():
                 self.selected_data = {self._current_item}
@@ -226,12 +232,13 @@ class RoiManagerLayer(Shapes):
     def show_all(self, show_all: bool):
         if not isinstance(show_all, bool):
             raise TypeError("show_all must be a bool")
-        if self._show_all == show_all:
+        if self.show_all == show_all:
             return
         _current_item = self._current_item
         if show_all:  # "show all" checked
             self.selected_data = set()
             old_shape_type = self.shape_type
+            print(len(self._hidden_shapes.data), len(self.data))
             self.data = self._hidden_shapes.data + self.data
             self.features = pd.concat([self._hidden_shapes.features, self.features])
             if self._hidden_shapes.shape_type + old_shape_type:

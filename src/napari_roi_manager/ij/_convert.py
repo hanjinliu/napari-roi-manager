@@ -115,8 +115,8 @@ def roi_to_shape(ijroi: ImagejRoi) -> RoiTuple | None:
             ),
             ijroi.byteorder,
         )
-        start = np.array([ijroi.y1 - 1, ijroi.x1 - 1])
-        end = np.array([ijroi.y2 - 1, ijroi.x2 - 1])
+        start = np.array([ijroi.y1, ijroi.x1])
+        end = np.array([ijroi.y2, ijroi.x2])
         length = np.sqrt((end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2)
         width = length * ratio
         vec_longitudinal = end - start
@@ -148,10 +148,10 @@ def shape_to_roi(shape: RoiTuple) -> ImagejRoi:
     if shape.shape_type == "rectangle":
         if ys[0] == ys[1] or xs[0] == xs[1]:
             # not rotated
-            y0, y1 = ys.min(), ys.max()
-            x0, x1 = xs.min(), xs.max()
+            y0, y1 = ys.min() + 0.5, ys.max() + 0.5
+            x0, x1 = xs.min() + 0.5, xs.max() + 0.5
             roi = ImagejRoi.frompoints(
-                np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]) + 0.5,
+                np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]),
                 name=shape.name,
                 **_get_multidim_kwargs(shape),
             )
@@ -212,10 +212,10 @@ def shape_to_roi(shape: RoiTuple) -> ImagejRoi:
     elif shape.shape_type == "ellipse":
         if ys[0] == ys[1] or xs[0] == xs[1]:
             # not rotated
-            y0, y1 = ys.min(), ys.max()
-            x0, x1 = xs.min(), xs.max()
+            y0, y1 = ys.min() + 0.5, ys.max() + 0.5
+            x0, x1 = xs.min() + 0.5, xs.max() + 0.5
             roi = ImagejRoi.frompoints(
-                np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]) + 0.5,
+                np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]]),
                 name=shape.name,
                 **_get_multidim_kwargs(shape),
             )

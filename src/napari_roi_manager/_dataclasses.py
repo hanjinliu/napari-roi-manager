@@ -31,10 +31,10 @@ class HiddenShapes:
         current_item: int | None,
         display_text: bool = False,
     ):
-        self.data = data
+        self.data = data.copy()
         self.features = features
-        self.shape_type = shape_type
-        self.selected_data = selected_data
+        self.shape_type = shape_type.copy()
+        self.selected_data = selected_data.copy()
         self.current_item = current_item
         self.display_text = display_text
 

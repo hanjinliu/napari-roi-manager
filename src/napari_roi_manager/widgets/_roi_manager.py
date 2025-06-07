@@ -21,11 +21,11 @@ class QRoiManagerButtons(QtW.QWidget):
 
         # button widgets
         self._add_roi_btn = QtW.QPushButton("Add", self)
-        self._add_roi_btn.setToolTip("Add the current ROI to the manager.")
+        self._add_roi_btn.setToolTip("Add Shape as ROI to the manager.")
         self._remove_roi_btn = QtW.QPushButton("Remove", self)
-        self._add_roi_btn.setToolTip("Remove selected ROI from the manager.")
+        self._remove_roi_btn.setToolTip("Remove selected ROI from the manager.")
         self._specify_btn = QtW.QPushButton("Specify", self)
-        self._specify_btn.setToolTip("Specify the shape/position of the ROI.")
+        self._specify_btn.setToolTip("Specify a Rectangle shape.")
         self._load_roiset_btn = QtW.QPushButton("Load", self)
         self._load_roiset_btn.setToolTip("Load ROIs from a file.")
         self._save_roiset_btn = QtW.QPushButton("Save", self)

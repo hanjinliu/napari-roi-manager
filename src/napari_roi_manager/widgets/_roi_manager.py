@@ -176,6 +176,10 @@ class QRoiManager(QtW.QWidget):
         def _show_all_changed(state):
             layer.show_all = btns._show_all_checkbox.isChecked()
 
+        @layer.bind_key('t')
+        def _add_roi(layer):
+            layer.register_roi()
+
         @layer.events.roi_added.connect
         def _roi_added(event):
             tp = event.shape_type

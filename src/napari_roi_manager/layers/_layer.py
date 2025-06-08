@@ -193,6 +193,7 @@ class RoiManagerLayer(Shapes):
             super().remove_selected()
             if selected != {self._current_item}:
                 self.events.roi_removed(indices=selected)
+        self.refresh()
 
     @Shapes.mode.setter
     def mode(self, mode):

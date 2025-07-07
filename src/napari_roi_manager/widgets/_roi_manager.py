@@ -256,7 +256,7 @@ class QRoiManager(QtW.QWidget):
             file = QtW.QFileDialog.getOpenFileName(
                 self,
                 "Open ROIs",
-                filter="JSON (*.json;*.txt);;ImageJ ROI (*.roi;*.zip);;All Files (*)",
+                filter="JSON (*.json *.txt);;ImageJ ROI (*.roi *.zip);;All Files (*)",
             )
             if file:
                 path = file[0]
@@ -289,7 +289,7 @@ class QRoiManager(QtW.QWidget):
             file = QtW.QFileDialog.getSaveFileName(
                 self,
                 "Save ROIs",
-                filter="JSON (*.json;*.txt);;ImageJ ROI (*.zip);;All Files (*)",
+                filter="JSON (*.json *.txt);;ImageJ ROI (*.zip);;All Files (*)",
             )
             if file:
                 path = file[0]

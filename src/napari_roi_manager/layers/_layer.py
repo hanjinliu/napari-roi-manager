@@ -238,12 +238,16 @@ class RoiManagerLayer(Shapes):
         _current_item = self._current_item
         if show_all:  # "show all" checked
             self.selected_data = set()
-            old_shape_type = self.shape_type
-            self.data = self._hidden_shapes.data + self.data
-            self.features = pd.concat([self._hidden_shapes.features, self.features])
-            if self._hidden_shapes.shape_type + old_shape_type:
+            old_shape_type = shape_type_incoming = self.shape_type
+
+            data_incoming = self._hidden_shapes.data + self.data
+            if new_shape_type := self._hidden_shapes.shape_type + old_shape_type:
                 # NOTE: bug in napari? cannot set empty list to shape_type
-                self.shape_type = self._hidden_shapes.shape_type + old_shape_type
+                shape_type_incoming = new_shape_type
+
+            self.clear_visible_data()
+            self.add(data_incoming, shape_type=shape_type_incoming)
+            self.features = pd.concat([self._hidden_shapes.features, self.features])
             self._current_item = _current_item  # _current_item may change in setters
             if self._hidden_shapes.current_item is not None:
                 self._current_item = self._hidden_shapes.current_item
@@ -264,17 +268,21 @@ class RoiManagerLayer(Shapes):
             if self._current_item is not None:
                 cur, typ = self._hidden_shapes.pop(self._current_item)
                 self._current_item = None
-                self.data = []
+                self.clear_visible_data()
                 # add last current ROI to show only it.
                 self.add(cur, shape_type=typ)
                 self._current_item = 0
                 self.selected_data = {0}
             else:
-                self.selected_data = set()
-                self.data = []
+                self.clear_visible_data()
                 self._current_item = None
             self.text.visible = False
         self._show_all = show_all
+
+    def clear_visible_data(self):
+        self.selected_data = set()
+        self._current_item = None
+        self.data = []  # clear
 
     def as_shapes_layer(self) -> Shapes:
         """Convert this layer into napari Shapes layer."""

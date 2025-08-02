@@ -14,6 +14,12 @@ def _rectangle(y, x, size: float = 2):
     return np.array([[x, y], [x + size, y], [x + size, y + size], [x, y + size]])
 
 
+def _line(length: float = 2):
+    x = np.cos(0.2) * length
+    y = np.sin(0.2) * length
+    return np.array([[0, 0], [x, y]])
+
+
 def test_many_operations(make_napari_viewer: Callable[[], napari.Viewer]):
     viewer = make_napari_viewer()
     roi_manager = QRoiManager(viewer)
@@ -94,6 +100,23 @@ def test_remove_during_not_show_all(make_napari_viewer: Callable[[], napari.View
     roi_manager.set_show_all(True)
     assert roi_manager._layer.roi_count() == 2
     assert roi_manager._roilist.rowCount() == 2
+
+
+def test_adding_different_shape_types(make_napari_viewer: Callable[[], napari.Viewer]):
+    viewer = make_napari_viewer()
+    roi_manager = QRoiManager(viewer)
+    roi_manager.register(_rectangle(0, 0), shape_type="rectangle")
+    roi_manager.register(_rectangle(6, 6), shape_type="ellipse")
+    roi_manager.register(_line(3.1), shape_type="line")
+    assert roi_manager._layer.roi_count() == 3
+    assert roi_manager._roilist.rowCount() == 3
+    roi_manager.set_show_all(False)
+    roi_manager.set_show_all(True)
+    roi_manager._layer.add_rectangles(_rectangle(2, 5))
+    roi_manager.set_show_all(False)
+    assert roi_manager._layer.nshapes == 1
+    roi_manager.set_show_all(True)
+    assert roi_manager._layer.nshapes == 4
 
 
 def test_read_write(make_napari_viewer: Callable[[], napari.Viewer], tmpdir):
